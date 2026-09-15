@@ -2,17 +2,52 @@ name: Tema diário do Solta o Verbo
 
 on:
   schedule:
-    # Roda todo dia às 11:00 UTC = 08:00 no horário de Brasília
+    # Todo dia às 11:00 UTC = 08:00 no horário de Brasília
     - cron: '0 11 * * *'
-  workflow_dispatch: {} # permite rodar manualmente pelo GitHub também
+
+  # Permite executar manualmente
+  workflow_dispatch:
+
+# Permite que o GitHub Actions atualize o tema-do-dia.json
+permissions:
+  contents: write
 
 jobs:
+
   sortear-tema:
+
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+
+      # Baixa os arquivos do repositório
+      - name: Baixar repositório
+        uses: actions/checkout@v4
+
+      # Instala Node.js 20
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
         with:
           node-version: 20
-      - run: npm install puppeteer
-      - run: node solta-o-verbo.js
+
+      # Instala Puppeteer
+      - name: Instalar Puppeteer
+        run: npm install puppeteer
+
+      # Executa o nosso robô
+      - name: Sortear tema
+        env:
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+        run: node solta-o-verbo.js
+
+      # Salva o tema-do-dia.json no próprio repositório
+      - name: Salvar tema do dia
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add tema-do-dia.json
+
+          git diff --cached --quiet || git commit -m "Atualiza tema do dia"
+
+          git push
