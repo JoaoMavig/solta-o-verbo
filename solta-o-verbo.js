@@ -1,11 +1,14 @@
 const puppeteer = require('puppeteer');
+const fs = require('fs');
 
 // ======================================================
 // CONFIGURAÇÕES
 // ======================================================
 
 const MODE_URL = 'https://soltaoverbo.com.br/cerebro';
-const NTFY_TOPIC = 'soltaoverbomavig';
+
+// Agora o tópico vem do GitHub Secret
+const NTFY_TOPIC = process.env.NTFY_TOPIC;
 
 const CATEGORIAS = [
     'Ciência',
@@ -30,9 +33,17 @@ const CATEGORIAS = [
 
     try {
 
-        // --------------------------------------------------
+        // Verifica se o Secret existe
+        if (!NTFY_TOPIC) {
+            throw new Error(
+                'O secret NTFY_TOPIC não foi configurado.'
+            );
+        }
+
+
+        // ==================================================
         // ABRE O NAVEGADOR
-        // --------------------------------------------------
+        // ==================================================
 
         browser = await puppeteer.launch({
             headless: true,
@@ -48,9 +59,9 @@ const CATEGORIAS = [
         });
 
 
-        // --------------------------------------------------
+        // ==================================================
         // ENCONTRA O TEXTO GRANDE DO TEMA
-        // --------------------------------------------------
+        // ==================================================
 
         const temaSelector = 'p.font-display.font-bold';
 
@@ -69,9 +80,9 @@ const CATEGORIAS = [
         );
 
 
-        // --------------------------------------------------
+        // ==================================================
         // ENCONTRA O BOTÃO "SORTEAR"
-        // --------------------------------------------------
+        // ==================================================
 
         const buttonSelector =
             "xpath/.//button[contains(., 'Sortear')]";
@@ -80,8 +91,7 @@ const CATEGORIAS = [
             timeout: 10000
         });
 
-        const button =
-            await page.$(buttonSelector);
+        const button = await page.$(buttonSelector);
 
         if (!button) {
             throw new Error(
@@ -90,18 +100,18 @@ const CATEGORIAS = [
         }
 
 
-        // --------------------------------------------------
+        // ==================================================
         // CLICA EM "SORTEAR"
-        // --------------------------------------------------
+        // ==================================================
 
         console.log('Sorteando tema...');
 
         await button.click();
 
 
-        // --------------------------------------------------
+        // ==================================================
         // ESPERA O TEMA MUDAR
-        // --------------------------------------------------
+        // ==================================================
 
         await page.waitForFunction(
 
@@ -133,9 +143,9 @@ const CATEGORIAS = [
         );
 
 
-        // --------------------------------------------------
+        // ==================================================
         // CAPTURA O TEMA
-        // --------------------------------------------------
+        // ==================================================
 
         const tema = await page.$eval(
             temaSelector,
@@ -143,9 +153,9 @@ const CATEGORIAS = [
         );
 
 
-        // --------------------------------------------------
+        // ==================================================
         // CAPTURA A CATEGORIA
-        // --------------------------------------------------
+        // ==================================================
 
         const categoria = await page.evaluate(
 
@@ -171,52 +181,40 @@ const CATEGORIAS = [
                     elementos.indexOf(temaEl);
 
 
-                // ------------------------------------------
-                // PROCURA A CATEGORIA ANTES DO TEMA
-                // ------------------------------------------
-
+                // Procura a categoria antes do tema
                 for (
                     let i = indiceTema - 1;
                     i >= 0;
                     i--
                 ) {
 
-                    const el =
-                        elementos[i];
-
+                    const el = elementos[i];
 
                     // Ignora containers grandes
                     if (el.children.length > 0) {
                         continue;
                     }
 
-
                     const texto =
                         el.innerText
                             ?.replace(/\s+/g, ' ')
                             .trim();
 
-
                     if (!texto) {
                         continue;
                     }
 
-
                     const encontrada =
                         categorias.find(
-
                             cat =>
                                 cat.toLowerCase() ===
                                 texto.toLowerCase()
-
                         );
-
 
                     if (encontrada) {
                         return encontrada;
                     }
                 }
-
 
                 return 'Categoria não encontrada';
 
@@ -228,55 +226,74 @@ const CATEGORIAS = [
 
 
         // ==================================================
-        // MOSTRA O RESULTADO NO GITHUB ACTIONS
+        // MOSTRA RESULTADO NO GITHUB ACTIONS
         // ==================================================
 
         console.log('');
-        console.log(
-            '================================'
-        );
-
-        console.log(
-            '       SOLTA O VERBO'
-        );
-
-        console.log(
-            '================================'
-        );
-
+        console.log('================================');
+        console.log('       SOLTA O VERBO');
+        console.log('================================');
         console.log('');
 
-        console.log(
-            `Categoria: ${categoria}`
-        );
-
-        console.log(
-            `Tema: ${tema}`
-        );
+        console.log(`Categoria: ${categoria}`);
+        console.log(`Tema: ${tema}`);
 
         console.log('');
+        console.log('================================');
 
+
+        // ==================================================
+        // SALVA O TEMA DO DIA EM JSON
+        // ==================================================
+
+        const dados = {
+
+            categoria: categoria,
+
+            tema: tema,
+
+            atualizadoEm:
+                new Date().toISOString()
+
+        };
+
+
+        fs.writeFileSync(
+
+            'tema-do-dia.json',
+
+            JSON.stringify(
+                dados,
+                null,
+                2
+            ),
+
+            'utf8'
+
+        );
+
+
+        console.log('');
         console.log(
-            '================================'
+            'tema-do-dia.json criado com sucesso!'
         );
 
 
         // ==================================================
-        // CRIA O LINK DE PESQUISA
+        // CRIA LINK PARA PESQUISAR O TEMA
         // ==================================================
 
         const linkPesquisa =
             `https://www.google.com/search?q=${encodeURIComponent(tema)}`;
 
 
-        console.log('');
         console.log(
             `Link de pesquisa: ${linkPesquisa}`
         );
 
 
         // ==================================================
-        // MONTA A MENSAGEM
+        // MONTA A NOTIFICAÇÃO
         // ==================================================
 
         const mensagem =
@@ -291,7 +308,7 @@ const CATEGORIAS = [
 
         console.log('');
         console.log(
-            'Enviando notificação...'
+            'Enviando notificação para o celular...'
         );
 
 
@@ -305,36 +322,30 @@ const CATEGORIAS = [
 
                 headers: {
 
-                    // Título da notificação
+                    // Título
                     Title: 'Solta o Verbo',
 
-                    // Adiciona 🧠 no título
+                    // 🧠 no título
                     Tags: 'brain',
 
                     // Prioridade normal
-                    // 1 = mínima
-                    // 2 = baixa
-                    // 3 = normal
-                    // 4 = alta
-                    // 5 = urgente
                     Priority: '3',
 
-                    // Botão para pesquisar o tema
-                    // IMPORTANTE:
-                    // sem emoji aqui porque headers HTTP
-                    // não aceitam esse emoji diretamente.
+                    // Botão para pesquisar
                     Actions:
                         `view, Pesquisar tema, ${linkPesquisa}`
+
                 },
 
-
                 body: mensagem
+
             }
+
         );
 
 
         // ==================================================
-        // VERIFICA SE O NTFY ACEITOU
+        // VERIFICA O ENVIO
         // ==================================================
 
         if (!resposta.ok) {
@@ -346,7 +357,6 @@ const CATEGORIAS = [
         }
 
 
-        console.log('');
         console.log(
             'Notificação enviada com sucesso!'
         );
@@ -355,7 +365,7 @@ const CATEGORIAS = [
     } catch (erro) {
 
         // ==================================================
-        // TRATAMENTO DE ERROS
+        // ERRO
         // ==================================================
 
         console.error('');
@@ -374,9 +384,7 @@ const CATEGORIAS = [
         // ==================================================
 
         if (browser) {
-
             await browser.close();
-
         }
 
     }
