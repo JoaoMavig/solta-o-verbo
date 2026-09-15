@@ -36,10 +36,11 @@ const NTFY_TOPIC = 'soltaoverbomavig';
   }
   await button.click();
 
-  // Espera o texto do tema mudar
+  // Espera o texto do tema mudar (comparação sem diferenciar maiúsculas/minúsculas,
+  // já que o site exibe o texto em CAIXA ALTA via CSS mas o texto real é minúsculo)
   await page.waitForFunction(
-    (el) => el && el.innerText && !el.innerText.includes('seu tema aparece aqui'),
-    { timeout: 8000 },
+    (el) => el && el.innerText && !el.innerText.toLowerCase().includes('seu tema aparece aqui'),
+    { timeout: 10000 },
     placeholder
   );
 
