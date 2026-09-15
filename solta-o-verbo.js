@@ -248,7 +248,7 @@ const CATEGORIAS = [
         // --------------------------------------------------
 
         const mensagem =
-`🧠 Categoria: ${categoria}
+`📚 Categoria: ${categoria}
 
 🎲 Tema: ${tema}`;
 
