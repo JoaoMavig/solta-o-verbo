@@ -1,0 +1,18 @@
+name: Tema diário do Solta o Verbo
+
+on:
+  schedule:
+    # Roda todo dia às 11:00 UTC = 08:00 no horário de Brasília
+    - cron: '0 11 * * *'
+  workflow_dispatch: {} # permite rodar manualmente pelo GitHub também
+
+jobs:
+  sortear-tema:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm install puppeteer
+      - run: node solta-o-verbo.js
