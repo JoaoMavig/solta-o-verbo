@@ -63,7 +63,10 @@ const CATEGORIAS = [
             el => el.innerText.trim()
         );
 
-        console.log('Texto antes do sorteio:', temaAntes);
+        console.log(
+            'Texto antes do sorteio:',
+            temaAntes
+        );
 
 
         // --------------------------------------------------
@@ -77,7 +80,8 @@ const CATEGORIAS = [
             timeout: 10000
         });
 
-        const button = await page.$(buttonSelector);
+        const button =
+            await page.$(buttonSelector);
 
         if (!button) {
             throw new Error(
@@ -100,6 +104,7 @@ const CATEGORIAS = [
         // --------------------------------------------------
 
         await page.waitForFunction(
+
             (selector, textoAnterior) => {
 
                 const el =
@@ -118,9 +123,11 @@ const CATEGORIAS = [
                 );
 
             },
+
             {
                 timeout: 10000
             },
+
             temaSelector,
             temaAntes
         );
@@ -141,10 +148,13 @@ const CATEGORIAS = [
         // --------------------------------------------------
 
         const categoria = await page.evaluate(
+
             (categorias, temaSelector) => {
 
                 const temaEl =
-                    document.querySelector(temaSelector);
+                    document.querySelector(
+                        temaSelector
+                    );
 
                 if (!temaEl) {
                     return 'Categoria não encontrada';
@@ -160,58 +170,80 @@ const CATEGORIAS = [
                 const indiceTema =
                     elementos.indexOf(temaEl);
 
-                // Procura a categoria nos elementos
-                // anteriores ao tema.
+
+                // ------------------------------------------
+                // PROCURA A CATEGORIA ANTES DO TEMA
+                // ------------------------------------------
+
                 for (
                     let i = indiceTema - 1;
                     i >= 0;
                     i--
                 ) {
 
-                    const el = elementos[i];
+                    const el =
+                        elementos[i];
+
 
                     // Ignora containers grandes
                     if (el.children.length > 0) {
                         continue;
                     }
 
+
                     const texto =
                         el.innerText
                             ?.replace(/\s+/g, ' ')
                             .trim();
 
+
                     if (!texto) {
                         continue;
                     }
 
+
                     const encontrada =
                         categorias.find(
+
                             cat =>
                                 cat.toLowerCase() ===
                                 texto.toLowerCase()
+
                         );
+
 
                     if (encontrada) {
                         return encontrada;
                     }
                 }
 
+
                 return 'Categoria não encontrada';
 
             },
+
             CATEGORIAS,
             temaSelector
         );
 
 
-        // --------------------------------------------------
+        // ==================================================
         // MOSTRA O RESULTADO NO GITHUB ACTIONS
-        // --------------------------------------------------
+        // ==================================================
 
         console.log('');
-        console.log('================================');
-        console.log('       SOLTA O VERBO');
-        console.log('================================');
+        console.log(
+            '================================'
+        );
+
+        console.log(
+            '       SOLTA O VERBO'
+        );
+
+        console.log(
+            '================================'
+        );
+
         console.log('');
 
         console.log(
@@ -223,15 +255,19 @@ const CATEGORIAS = [
         );
 
         console.log('');
-        console.log('================================');
+
+        console.log(
+            '================================'
+        );
 
 
         // ==================================================
-        // CRIA LINK PARA PESQUISAR O TEMA
+        // CRIA O LINK DE PESQUISA
         // ==================================================
 
         const linkPesquisa =
             `https://www.google.com/search?q=${encodeURIComponent(tema)}`;
+
 
         console.log('');
         console.log(
@@ -254,37 +290,52 @@ const CATEGORIAS = [
         // ==================================================
 
         console.log('');
-        console.log('Enviando notificação...');
+        console.log(
+            'Enviando notificação...'
+        );
+
 
         const resposta = await fetch(
+
             `https://ntfy.sh/${NTFY_TOPIC}`,
+
             {
+
                 method: 'POST',
 
                 headers: {
 
-                    // Nome da notificação
+                    // Título da notificação
                     Title: 'Solta o Verbo',
 
-                    // 🧠 no título
+                    // Adiciona 🧠 no título
                     Tags: 'brain',
 
                     // Prioridade normal
+                    // 1 = mínima
+                    // 2 = baixa
+                    // 3 = normal
+                    // 4 = alta
+                    // 5 = urgente
                     Priority: '3',
 
                     // Botão para pesquisar o tema
+                    // IMPORTANTE:
+                    // sem emoji aqui porque headers HTTP
+                    // não aceitam esse emoji diretamente.
                     Actions:
-                        `view, 🔎 Pesquisar tema, ${linkPesquisa}`
+                        `view, Pesquisar tema, ${linkPesquisa}`
                 },
+
 
                 body: mensagem
             }
         );
 
 
-        // --------------------------------------------------
+        // ==================================================
         // VERIFICA SE O NTFY ACEITOU
-        // --------------------------------------------------
+        // ==================================================
 
         if (!resposta.ok) {
 
@@ -295,6 +346,7 @@ const CATEGORIAS = [
         }
 
 
+        console.log('');
         console.log(
             'Notificação enviada com sucesso!'
         );
@@ -322,7 +374,9 @@ const CATEGORIAS = [
         // ==================================================
 
         if (browser) {
+
             await browser.close();
+
         }
 
     }
