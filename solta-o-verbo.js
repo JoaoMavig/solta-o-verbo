@@ -50,9 +50,6 @@ const CATEGORIAS = [
 
         // --------------------------------------------------
         // ENCONTRA O TEXTO GRANDE DO TEMA
-        //
-        // Pelo HTML da página, o tema usa:
-        // <p class="... font-display text-4xl font-bold ...">
         // --------------------------------------------------
 
         const temaSelector = 'p.font-display.font-bold';
@@ -70,7 +67,7 @@ const CATEGORIAS = [
 
 
         // --------------------------------------------------
-        // ENCONTRA O BOTÃO SORTEAR
+        // ENCONTRA O BOTÃO "SORTEAR"
         // --------------------------------------------------
 
         const buttonSelector =
@@ -90,7 +87,7 @@ const CATEGORIAS = [
 
 
         // --------------------------------------------------
-        // CLICA EM SORTEAR
+        // CLICA EM "SORTEAR"
         // --------------------------------------------------
 
         console.log('Sorteando tema...');
@@ -99,7 +96,7 @@ const CATEGORIAS = [
 
 
         // --------------------------------------------------
-        // ESPERA O TEMA GRANDE MUDAR
+        // ESPERA O TEMA MUDAR
         // --------------------------------------------------
 
         await page.waitForFunction(
@@ -130,7 +127,7 @@ const CATEGORIAS = [
 
 
         // --------------------------------------------------
-        // CAPTURA O TEMA CORRETO
+        // CAPTURA O TEMA
         // --------------------------------------------------
 
         const tema = await page.$eval(
@@ -153,27 +150,18 @@ const CATEGORIAS = [
                     return 'Categoria não encontrada';
                 }
 
-                /*
-                 A categoria aparece antes do tema.
-
-                 Vamos procurar elementos anteriores ao tema
-                 e comparar o texto deles com a lista de
-                 categorias conhecidas.
-                */
-
                 const elementos =
                     Array.from(
-                        document.querySelectorAll('p, span, div')
+                        document.querySelectorAll(
+                            'p, span, div'
+                        )
                     );
 
                 const indiceTema =
                     elementos.indexOf(temaEl);
 
-                /*
-                 Começa imediatamente antes do tema e
-                 vai voltando pela página.
-                */
-
+                // Procura a categoria nos elementos
+                // anteriores ao tema.
                 for (
                     let i = indiceTema - 1;
                     i >= 0;
@@ -182,12 +170,7 @@ const CATEGORIAS = [
 
                     const el = elementos[i];
 
-                    /*
-                     Ignora containers que possuem filhos,
-                     pois queremos o elemento que contém
-                     somente o nome da categoria.
-                    */
-
+                    // Ignora containers grandes
                     if (el.children.length > 0) {
                         continue;
                     }
@@ -222,7 +205,7 @@ const CATEGORIAS = [
 
 
         // --------------------------------------------------
-        // MOSTRA NO GITHUB ACTIONS
+        // MOSTRA O RESULTADO NO GITHUB ACTIONS
         // --------------------------------------------------
 
         console.log('');
@@ -243,9 +226,22 @@ const CATEGORIAS = [
         console.log('================================');
 
 
-        // --------------------------------------------------
-        // MONTA A NOTIFICAÇÃO
-        // --------------------------------------------------
+        // ==================================================
+        // CRIA LINK PARA PESQUISAR O TEMA
+        // ==================================================
+
+        const linkPesquisa =
+            `https://www.google.com/search?q=${encodeURIComponent(tema)}`;
+
+        console.log('');
+        console.log(
+            `Link de pesquisa: ${linkPesquisa}`
+        );
+
+
+        // ==================================================
+        // MONTA A MENSAGEM
+        // ==================================================
 
         const mensagem =
 `📚 Categoria: ${categoria}
@@ -253,14 +249,12 @@ const CATEGORIAS = [
 🎲 Tema: ${tema}`;
 
 
-        // --------------------------------------------------
+        // ==================================================
         // ENVIA PARA O NTFY
-        // --------------------------------------------------
+        // ==================================================
 
         console.log('');
-        console.log(
-            'Enviando notificação...'
-        );
+        console.log('Enviando notificação...');
 
         const resposta = await fetch(
             `https://ntfy.sh/${NTFY_TOPIC}`,
@@ -268,8 +262,19 @@ const CATEGORIAS = [
                 method: 'POST',
 
                 headers: {
+
+                    // Nome da notificação
                     Title: 'Solta o Verbo',
-                    Tags: 'brain'
+
+                    // 🧠 no título
+                    Tags: 'brain',
+
+                    // Prioridade normal
+                    Priority: '3',
+
+                    // Botão para pesquisar o tema
+                    Actions:
+                        `view, 🔎 Pesquisar tema, ${linkPesquisa}`
                 },
 
                 body: mensagem
@@ -278,7 +283,7 @@ const CATEGORIAS = [
 
 
         // --------------------------------------------------
-        // VERIFICA O ENVIO
+        // VERIFICA SE O NTFY ACEITOU
         // --------------------------------------------------
 
         if (!resposta.ok) {
@@ -289,12 +294,17 @@ const CATEGORIAS = [
 
         }
 
+
         console.log(
             'Notificação enviada com sucesso!'
         );
 
 
     } catch (erro) {
+
+        // ==================================================
+        // TRATAMENTO DE ERROS
+        // ==================================================
 
         console.error('');
         console.error(
@@ -307,9 +317,9 @@ const CATEGORIAS = [
 
     } finally {
 
-        // --------------------------------------------------
+        // ==================================================
         // FECHA O NAVEGADOR
-        // --------------------------------------------------
+        // ==================================================
 
         if (browser) {
             await browser.close();
