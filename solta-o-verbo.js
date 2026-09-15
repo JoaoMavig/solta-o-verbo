@@ -9,24 +9,28 @@ const MODE_URL = 'https://soltaoverbo.com.br/cerebro';
 
 // Crie um "tópico" único e secreto em https://ntfy.sh (não precisa cadastro).
 // Depois instale o app ntfy no celular e "inscreva-se" no mesmo nome de tópico.
-const NTFY_TOPIC = 'soltaoverbo';
+const NTFY_TOPIC = 'soltaoverbomavig';
 
 (async () => {
   const browser = await puppeteer.launch({
-    headless: 'new',
+    headless: true,
     args: ['--no-sandbox'],
   });
   const page = await browser.newPage();
   await page.goto(MODE_URL, { waitUntil: 'networkidle0' });
 
   // Acha o elemento que mostra "seu tema aparece aqui" antes do sorteio
-  const [placeholder] = await page.$x("//*[contains(text(), 'seu tema aparece aqui')]");
+  const placeholderSelector = "xpath/.//*[contains(text(), 'seu tema aparece aqui')]";
+  await page.waitForSelector(placeholderSelector, { timeout: 10000 });
+  const placeholder = await page.$(placeholderSelector);
   if (!placeholder) {
     throw new Error('Não encontrei o elemento do tema. O site pode ter mudado — ajuste o seletor.');
   }
 
   // Acha e clica no botão "Sortear"
-  const [button] = await page.$x("//button[contains(., 'Sortear')]");
+  const buttonSelector = "xpath/.//button[contains(., 'Sortear')]";
+  await page.waitForSelector(buttonSelector, { timeout: 10000 });
+  const button = await page.$(buttonSelector);
   if (!button) {
     throw new Error('Não encontrei o botão Sortear. O site pode ter mudado.');
   }
