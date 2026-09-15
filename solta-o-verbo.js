@@ -4,13 +4,9 @@ const puppeteer = require('puppeteer');
 // CONFIGURAÇÕES
 // ======================================================
 
-// Modo "Exercitando o Cérebro"
 const MODE_URL = 'https://soltaoverbo.com.br/cerebro';
-
-// Seu tópico do ntfy
 const NTFY_TOPIC = 'soltaoverbomavig';
 
-// Categorias existentes no modo "Exercitando o Cérebro"
 const CATEGORIAS = [
     'Ciência',
     'Comportamento social',
@@ -53,45 +49,38 @@ const CATEGORIAS = [
 
 
         // --------------------------------------------------
-        // ENCONTRA O LOCAL ONDE O TEMA APARECE
+        // ENCONTRA O TEXTO GRANDE DO TEMA
+        //
+        // Pelo HTML da página, o tema usa:
+        // <p class="... font-display text-4xl font-bold ...">
         // --------------------------------------------------
 
-        const placeholderSelector =
-            "xpath/.//*[contains(translate(text(), 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), 'seu tema aparece aqui')]";
+        const temaSelector = 'p.font-display.font-bold';
 
-        await page.waitForSelector(
-            placeholderSelector,
-            {
-                timeout: 10000
-            }
+        await page.waitForSelector(temaSelector, {
+            timeout: 10000
+        });
+
+        const temaAntes = await page.$eval(
+            temaSelector,
+            el => el.innerText.trim()
         );
 
-        const placeholder =
-            await page.$(placeholderSelector);
-
-        if (!placeholder) {
-            throw new Error(
-                'Não encontrei o local onde o tema aparece.'
-            );
-        }
+        console.log('Texto antes do sorteio:', temaAntes);
 
 
         // --------------------------------------------------
-        // ENCONTRA O BOTÃO "SORTEAR"
+        // ENCONTRA O BOTÃO SORTEAR
         // --------------------------------------------------
 
         const buttonSelector =
             "xpath/.//button[contains(., 'Sortear')]";
 
-        await page.waitForSelector(
-            buttonSelector,
-            {
-                timeout: 10000
-            }
-        );
+        await page.waitForSelector(buttonSelector, {
+            timeout: 10000
+        });
 
-        const button =
-            await page.$(buttonSelector);
+        const button = await page.$(buttonSelector);
 
         if (!button) {
             throw new Error(
@@ -101,7 +90,7 @@ const CATEGORIAS = [
 
 
         // --------------------------------------------------
-        // CLICA EM "SORTEAR"
+        // CLICA EM SORTEAR
         // --------------------------------------------------
 
         console.log('Sorteando tema...');
@@ -110,159 +99,186 @@ const CATEGORIAS = [
 
 
         // --------------------------------------------------
-        // ESPERA O TEMA SER ALTERADO
+        // ESPERA O TEMA GRANDE MUDAR
         // --------------------------------------------------
 
         await page.waitForFunction(
+            (selector, textoAnterior) => {
 
-            (el) => {
+                const el =
+                    document.querySelector(selector);
+
+                if (!el) {
+                    return false;
+                }
+
+                const texto =
+                    el.innerText.trim();
 
                 return (
-                    el &&
-                    el.innerText &&
-                    !el.innerText
-                        .toLowerCase()
-                        .includes(
-                            'seu tema aparece aqui'
-                        )
+                    texto.length > 0 &&
+                    texto !== textoAnterior
                 );
 
             },
-
             {
                 timeout: 10000
             },
-
-            placeholder
+            temaSelector,
+            temaAntes
         );
 
 
         // --------------------------------------------------
-        // PEGA O TEMA
+        // CAPTURA O TEMA CORRETO
         // --------------------------------------------------
 
-        const tema =
-            await page.evaluate(
-                (el) => el.innerText.trim(),
-                placeholder
-            );
+        const tema = await page.$eval(
+            temaSelector,
+            el => el.innerText.trim()
+        );
 
 
         // --------------------------------------------------
-        // PROCURA A CATEGORIA DO TEMA
+        // CAPTURA A CATEGORIA
         // --------------------------------------------------
 
-        const categoria =
-            await page.evaluate(
+        const categoria = await page.evaluate(
+            (categorias, temaSelector) => {
 
-                (temaEl, categorias) => {
+                const temaEl =
+                    document.querySelector(temaSelector);
+
+                if (!temaEl) {
+                    return 'Categoria não encontrada';
+                }
+
+                /*
+                 A categoria aparece antes do tema.
+
+                 Vamos procurar elementos anteriores ao tema
+                 e comparar o texto deles com a lista de
+                 categorias conhecidas.
+                */
+
+                const elementos =
+                    Array.from(
+                        document.querySelectorAll('p, span, div')
+                    );
+
+                const indiceTema =
+                    elementos.indexOf(temaEl);
+
+                /*
+                 Começa imediatamente antes do tema e
+                 vai voltando pela página.
+                */
+
+                for (
+                    let i = indiceTema - 1;
+                    i >= 0;
+                    i--
+                ) {
+
+                    const el = elementos[i];
 
                     /*
-                    Começa no elemento do tema
-                    e vai subindo pela estrutura da página.
-
-                    Em cada nível, procura algum elemento
-                    cujo texto seja exatamente igual
-                    a uma das categorias conhecidas.
+                     Ignora containers que possuem filhos,
+                     pois queremos o elemento que contém
+                     somente o nome da categoria.
                     */
 
-                    let elemento =
-                        temaEl.parentElement;
-
-                    for (
-                        let nivel = 0;
-                        nivel < 6 && elemento;
-                        nivel++
-                    ) {
-
-                        const elementos =
-                            elemento.querySelectorAll('*');
-
-                        for (const el of elementos) {
-
-                            const texto =
-                                el.innerText?.trim();
-
-                            if (!texto) {
-                                continue;
-                            }
-
-                            const encontrada =
-                                categorias.find(
-                                    (cat) =>
-                                        cat.toLowerCase() ===
-                                        texto.toLowerCase()
-                                );
-
-                            if (encontrada) {
-                                return encontrada;
-                            }
-                        }
-
-                        elemento =
-                            elemento.parentElement;
+                    if (el.children.length > 0) {
+                        continue;
                     }
 
-                    return 'Categoria não encontrada';
+                    const texto =
+                        el.innerText
+                            ?.replace(/\s+/g, ' ')
+                            .trim();
 
-                },
+                    if (!texto) {
+                        continue;
+                    }
 
-                placeholder,
-                CATEGORIAS
-            );
+                    const encontrada =
+                        categorias.find(
+                            cat =>
+                                cat.toLowerCase() ===
+                                texto.toLowerCase()
+                        );
+
+                    if (encontrada) {
+                        return encontrada;
+                    }
+                }
+
+                return 'Categoria não encontrada';
+
+            },
+            CATEGORIAS,
+            temaSelector
+        );
 
 
         // --------------------------------------------------
-        // MOSTRA O RESULTADO NO GITHUB ACTIONS
+        // MOSTRA NO GITHUB ACTIONS
         // --------------------------------------------------
 
         console.log('');
-        console.log('==============================');
-        console.log('SOLTA O VERBO');
-        console.log('==============================');
+        console.log('================================');
+        console.log('       SOLTA O VERBO');
+        console.log('================================');
         console.log('');
+
         console.log(
-            'Categoria:',
-            categoria
+            `Categoria: ${categoria}`
         );
 
         console.log(
-            'Tema:',
-            tema
+            `Tema: ${tema}`
         );
 
         console.log('');
+        console.log('================================');
 
 
         // --------------------------------------------------
-        // ENVIA NOTIFICAÇÃO PARA O CELULAR
+        // MONTA A NOTIFICAÇÃO
         // --------------------------------------------------
 
+        const mensagem =
+`🧠 Categoria: ${categoria}
+
+🎲 Tema: ${tema}`;
+
+
+        // --------------------------------------------------
+        // ENVIA PARA O NTFY
+        // --------------------------------------------------
+
+        console.log('');
         console.log(
             'Enviando notificação...'
         );
 
-        const resposta =
-            await fetch(
-                `https://ntfy.sh/${NTFY_TOPIC}`,
-                {
-                    method: 'POST',
+        const resposta = await fetch(
+            `https://ntfy.sh/${NTFY_TOPIC}`,
+            {
+                method: 'POST',
 
-                    headers: {
-                        Title: 'Solta o Verbo',
-                        Tags: 'brain'
-                    },
+                headers: {
+                    Title: 'Solta o Verbo',
+                    Tags: 'brain'
+                },
 
-                    body:
-`🧠 Categoria: ${categoria}
-
-🎲 Tema: ${tema}`
-                }
-            );
+                body: mensagem
+            }
+        );
 
 
         // --------------------------------------------------
-        // VERIFICA SE O NTFY ACEITOU
+        // VERIFICA O ENVIO
         // --------------------------------------------------
 
         if (!resposta.ok) {
@@ -273,17 +289,12 @@ const CATEGORIAS = [
 
         }
 
-
         console.log(
             'Notificação enviada com sucesso!'
         );
 
 
     } catch (erro) {
-
-        // --------------------------------------------------
-        // MOSTRA ERROS NO GITHUB ACTIONS
-        // --------------------------------------------------
 
         console.error('');
         console.error(
