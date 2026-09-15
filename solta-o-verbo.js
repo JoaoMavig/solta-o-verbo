@@ -5,11 +5,11 @@ const puppeteer = require('puppeteer');
 // https://soltaoverbo.com.br/oratoria  -> Praticar oratória
 // https://soltaoverbo.com.br/jogar     -> Jogar (puxar assunto)
 // https://soltaoverbo.com.br/cerebro   -> Exercitando o Cérebro
-const MODE_URL = 'https://soltaoverbo.com.br/oratoria';
+const MODE_URL = 'https://soltaoverbo.com.br/cerebro';
 
 // Crie um "tópico" único e secreto em https://ntfy.sh (não precisa cadastro).
 // Depois instale o app ntfy no celular e "inscreva-se" no mesmo nome de tópico.
-const NTFY_TOPIC = 'troque-por-um-nome-unico-seu';
+const NTFY_TOPIC = 'soltaoverbo';
 
 (async () => {
   const browser = await puppeteer.launch({
