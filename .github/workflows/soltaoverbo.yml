@@ -2,10 +2,9 @@ name: Tema diário do Solta o Verbo
 
 on:
   schedule:
-    # Todo dia às 11:00 UTC = 08:00 no horário de Brasília
-    - cron: '0 11 * * *'
+    # Todo dia às 11:07 UTC = 08:07 no horário de Brasília
+    - cron: '7 11 * * *'
 
-  # Permite executar manualmente
   workflow_dispatch:
 
 # Permite que o GitHub Actions atualize o tema-do-dia.json
